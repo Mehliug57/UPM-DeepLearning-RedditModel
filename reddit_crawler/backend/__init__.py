@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from reddit_crawler.backend.config import Config
+from reddit_crawler.backend.models import User, create_admin_user
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
