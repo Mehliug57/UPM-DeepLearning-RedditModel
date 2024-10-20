@@ -11,9 +11,11 @@ const StartCollection = () => {
     };
 
     return (
-        <div>
+        <div className="bg-secondary p-3 rounded mb-4">
             <h2>Start Collection</h2>
-            <button onClick={handleStartCollection}>Start Collection</button>
+            <button onClick={handleStartCollection} className="btn btn-primary">
+                Start Collection
+            </button>
         </div>
     );
 };

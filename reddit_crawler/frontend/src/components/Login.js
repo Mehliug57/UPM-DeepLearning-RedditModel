@@ -27,10 +27,10 @@ const Login = ({ setIsLoggedIn }) => {
     };
 
     return (
-        <div className="container mt-5">
-            <form onSubmit={handleLogin} className="border p-4 rounded bg-light">
+        <div className="container d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+            <form onSubmit={handleLogin} className="border p-4 rounded bg-dark text-white" style={{ width: '300px' }}>
                 <h2 className="text-center mb-4">Login</h2>
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <input
                         type="text"
                         className="form-control"
@@ -40,7 +40,7 @@ const Login = ({ setIsLoggedIn }) => {
                         required
                     />
                 </div>
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <input
                         type="password"
                         className="form-control"
@@ -50,7 +50,7 @@ const Login = ({ setIsLoggedIn }) => {
                         required
                     />
                 </div>
-                <button type="submit" className="text-center btn btn-primary btn-block">Login</button>
+                <button type="submit" className="btn btn-primary btn-block">Login</button>
             </form>
         </div>
     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 
 const StatusDisplay = () => {
@@ -19,7 +19,7 @@ const StatusDisplay = () => {
     }, []);
 
     return (
-        <div>
+        <div className="bg-secondary p-3 rounded mb-4">
             <h2>Status</h2>
             <p>Status: {status}</p>
             <p>Current Subreddit: {currentSubreddit}</p>

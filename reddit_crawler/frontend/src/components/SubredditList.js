@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 
 const SubredditList = () => {
@@ -13,12 +13,13 @@ const SubredditList = () => {
     }, []);
 
     return (
-        <div>
+        <div className="bg-secondary p-3 rounded mb-4">
             <h2>Subreddits</h2>
-            <ul>
+            <ul className="list-unstyled">
                 {subreddits.map(subreddit => (
-                    <li key={subreddit.name}>
-                        {subreddit.name} - Collected Posts: {subreddit.collected_posts}
+                    <li key={subreddit.name} className="py-2">
+                        <span className="font-weight-bold">{subreddit.name}</span> - Collected
+                        Posts: {subreddit.collected_posts}
                     </li>
                 ))}
             </ul>
