@@ -2,10 +2,9 @@ import json
 import random
 import threading
 import time
-from datetime import timedelta
-
 import praw
 
+from datetime import timedelta
 from flask import Flask, render_template, jsonify, request
 from models import db, User, create_admin_user, bcrypt, Subreddit, Post, Response
 from flask import Flask, session
@@ -59,17 +58,13 @@ def load_user(user_id):
     return User.query.filter_by(id=user_id).first()
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
     data = request.json
     user = User.query.filter_by(username=data['username']).first()
-
     if user and bcrypt.check_password_hash(user.password, data['password']):
         login_user(user)
-        if current_user.is_authenticated:
-            print("Logged in successfully!")
-            return jsonify({"success": True, "message": "Logged in successfully!"}), 200
-        print("Login failed")
+        return jsonify({"success": True, "message": "Logged in successfully!"}), 200
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
@@ -82,6 +77,7 @@ def logout():
 
 
 def collection_wrapper():
+    print("Collection started")
     global current_subreddit, currently_collecting, status
     currently_collecting = True
     with app.app_context():

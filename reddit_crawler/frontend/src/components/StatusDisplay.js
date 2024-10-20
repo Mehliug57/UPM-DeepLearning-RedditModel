@@ -8,14 +8,20 @@ const StatusDisplay = () => {
     const [postLimit, setPostLimit] = useState(5000);
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/status', { withCredentials: true })
-            .then(response => {
-                setStatus(response.data.status);
-                setCurrentSubreddit(response.data.current_subreddit);
-                setCurrentlyCollecting(response.data.currently_collecting);
-                setPostLimit(response.data.current_post_limit);
-            })
-            .catch(error => console.error(error));
+        const fetchStatus = () => {
+            axios.get('http://127.0.0.1:5000/status', { withCredentials: true })
+                .then(response => {
+                    setStatus(response.data.status);
+                    setCurrentSubreddit(response.data.current_subreddit);
+                    setCurrentlyCollecting(response.data.currently_collecting);
+                    setPostLimit(response.data.current_post_limit);
+                })
+                .catch(error => console.error(error));
+        };
+
+        fetchStatus();
+        const intervalId = setInterval(fetchStatus, 5000);
+        return () => clearInterval(intervalId);
     }, []);
 
     return (
