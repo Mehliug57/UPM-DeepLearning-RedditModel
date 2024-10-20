@@ -16,7 +16,7 @@ const Login = ({setIsLoggedIn}) => {
             }, {withCredentials: true});
             if (response.data.success) {
                 setIsLoggedIn(true);
-                console.log("Logged in: " + response.data);
+                console.log("Logged in: " + response.data.success);
                 navigate('/');
             } else {
                 console.log(response.data);

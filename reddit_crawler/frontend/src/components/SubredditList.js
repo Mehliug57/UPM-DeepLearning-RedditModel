@@ -5,7 +5,7 @@ const SubredditList = () => {
     const [subreddits, setSubreddits] = useState([]);
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/subreddit_list')
+        axios.get('http://127.0.0.1:5000/subreddit_list', { withCredentials: true })
             .then(response => {
                 setSubreddits(response.data);
             })

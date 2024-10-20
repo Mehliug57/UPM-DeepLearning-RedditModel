@@ -8,7 +8,7 @@ const StatusDisplay = () => {
     const [postLimit, setPostLimit] = useState(5000);
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/status')
+        axios.get('http://127.0.0.1:5000/status', { withCredentials: true })
             .then(response => {
                 setStatus(response.data.status);
                 setCurrentSubreddit(response.data.current_subreddit);
