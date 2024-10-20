@@ -1,0 +1,9 @@
+Flask
+Flask-Bcrypt
+Flask-Cors
+Flask-SQLAlchemy
+Jinja2
+MarkupSafe
+SQLAlchemy
+bcrypt
+praw
