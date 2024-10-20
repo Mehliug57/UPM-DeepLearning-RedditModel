@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 
-const Login = ({ setIsLoggedIn }) => {
+const Login = ({setIsLoggedIn}) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
@@ -13,9 +13,10 @@ const Login = ({ setIsLoggedIn }) => {
             const response = await axios.post('http://127.0.0.1:5000/login', {
                 username,
                 password,
-            });
+            }, {withCredentials: true});
             if (response.data.success) {
                 setIsLoggedIn(true);
+                console.log("Logged in: " + response.data);
                 navigate('/');
             } else {
                 console.log(response.data);
@@ -27,8 +28,8 @@ const Login = ({ setIsLoggedIn }) => {
     };
 
     return (
-        <div className="container d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
-            <form onSubmit={handleLogin} className="border p-4 rounded bg-dark text-white" style={{ width: '300px' }}>
+        <div className="container d-flex justify-content-center align-items-center" style={{height: '100vh'}}>
+            <form onSubmit={handleLogin} className="border p-4 rounded bg-dark text-white" style={{width: '300px'}}>
                 <h2 className="text-center mb-4">Login</h2>
                 <div className="form-group mb-3">
                     <input

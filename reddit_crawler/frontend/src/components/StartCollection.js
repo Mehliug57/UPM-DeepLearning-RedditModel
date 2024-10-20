@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const StartCollection = () => {
     const handleStartCollection = () => {
-        axios.get('http://127.0.0.1:5000/start_collection')
+        axios.post('http://127.0.0.1:5000/start_collection')
             .then(response => {
                 alert(response.data);
             })

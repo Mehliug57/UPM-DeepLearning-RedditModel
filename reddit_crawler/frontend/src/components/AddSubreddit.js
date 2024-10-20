@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 const AddSubreddit = () => {
@@ -6,7 +6,7 @@ const AddSubreddit = () => {
 
     const handleAddSubreddit = () => {
         if (subredditName !== '') {
-            axios.get(`http://127.0.0.1:5000/add_subreddit/${subredditName}`)
+            axios.post('http://127.0.0.1:5000/add_subreddit', { subreddit_name: subredditName })
                 .then(response => {
                     alert(response.data);
                     setSubredditName('');
@@ -21,13 +21,13 @@ const AddSubreddit = () => {
         <div className="bg-secondary p-3 rounded mb-4">
             <h2>Add Subreddit</h2>
             <div className="form-group mb-3">
-            <input
-                type="text"
-                value={subredditName}
-                onChange={e => setSubredditName(e.target.value)}
-                placeholder="Enter subreddit name"
-                className="form-control"
-            />
+                <input
+                    type="text"
+                    value={subredditName}
+                    onChange={e => setSubredditName(e.target.value)}
+                    placeholder="Enter subreddit name"
+                    className="form-control"
+                />
             </div>
             <button onClick={handleAddSubreddit} className="btn btn-primary">Add Subreddit</button>
         </div>
