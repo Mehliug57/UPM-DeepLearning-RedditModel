@@ -97,7 +97,11 @@ def collection_wrapper():
 def collect_posts(subreddit_name):
     global status
     subreddit = reddit.subreddit(subreddit_name)
-    post_counter = 0
+    in_database = Subreddit.query.filter_by(name=subreddit_name).first()
+    if in_database:
+        post_counter = in_database.collected_posts
+    else:
+        post_counter = 0
 
     for post in subreddit.hot(limit=current_post_limit):
         new_post = Post(
@@ -132,26 +136,28 @@ def collect_posts(subreddit_name):
                 db.session.rollback()
 
         post_counter += 1
+        in_database.collected_posts += 1
+        db.session.commit()
 
-        pause_time = random.uniform(0.5, 2.5)
+        pause_time = random.uniform(0.5, 1)
         status = f"Saved Post {post_counter}/{current_post_limit} - Pause for {pause_time} seconds."
         time.sleep(pause_time)
 
 
 @app.route('/', methods=['GET'])
-@login_required
+# @login_required
 def home():
     return jsonify(message="Flask App with Admin User")
 
 
 @app.route('/post_limit', methods=['GET'])
-@login_required
+# @login_required
 def post_limit():
     return jsonify({"current_post_limit": current_post_limit})
 
 
 @app.route('/change_post_limit/<int:new_limit>', methods=['POST'])
-@login_required
+# @login_required
 def change_post_limit(new_limit):
     global current_post_limit
     current_post_limit = new_limit
@@ -159,7 +165,7 @@ def change_post_limit(new_limit):
 
 
 @app.route('/subreddit_list', methods=['GET'])
-@login_required
+# @login_required
 def subreddit_list():
     subreddits = Subreddit.query.all()
     subreddit_data = [
@@ -174,7 +180,7 @@ def subreddit_list():
 
 
 @app.route('/add_subreddit', methods=['POST'])
-@login_required
+# @login_required
 def add_subreddit():
     subreddit_name = request.json.get('subreddit_name')
     check = Subreddit.query.filter_by(name=subreddit_name).first()
@@ -188,7 +194,7 @@ def add_subreddit():
 
 
 @app.route('/start_collection', methods=['POST'])
-@login_required
+# @login_required
 def start_collection():
     collection_thread = threading.Thread(target=collection_wrapper)
     collection_thread.start()
@@ -196,7 +202,7 @@ def start_collection():
 
 
 @app.route('/status', methods=['GET'])
-@login_required
+# @login_required
 def get_status():
     return jsonify({
         'status': status,
