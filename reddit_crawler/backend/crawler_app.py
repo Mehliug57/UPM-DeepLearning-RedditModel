@@ -59,6 +59,9 @@ def login():
     data = request.json
     user = User.query.filter_by(username=data['username']).first()
 
+    print("Username: ", data['username'])
+    print("Password: ", data['password'])
+
     if user and bcrypt.check_password_hash(user.password, data['password']):
         login_user(user)
         print("Logged in successfully!")

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const StatusDisplay = () => {
@@ -8,14 +8,22 @@ const StatusDisplay = () => {
     const [postLimit, setPostLimit] = useState(5000);
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/status')
-            .then(response => {
-                setStatus(response.data.status);
-                setCurrentSubreddit(response.data.current_subreddit);
-                setCurrentlyCollecting(response.data.currently_collecting);
-                setPostLimit(response.data.post_limit);
-            })
-            .catch(error => console.error(error));
+        const fetchStatus = () => {
+            axios.get('http://127.0.0.1:5000/status')
+                .then(response => {
+                    setStatus(response.data.status);
+                    setCurrentSubreddit(response.data.current_subreddit);
+                    setCurrentlyCollecting(response.data.currently_collecting);
+                    setPostLimit(response.data.post_limit);
+                })
+                .catch(error => console.error(error));
+        };
+
+        fetchStatus();
+
+        const intervalId = setInterval(fetchStatus, 5000);
+
+        return () => clearInterval(intervalId);
     }, []);
 
     return (
