@@ -7,3 +7,4 @@ MarkupSafe
 SQLAlchemy
 bcrypt
 praw
+Flask-Login

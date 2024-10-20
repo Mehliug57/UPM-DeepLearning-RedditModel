@@ -4,11 +4,12 @@ import threading
 import time
 import praw
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from models import db, User, create_admin_user, bcrypt, Subreddit, Post, Response
 from flask import Flask
 from sqlalchemy.exc import IntegrityError
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 
 post_limit = 5000
 current_subreddit = None
@@ -25,10 +26,52 @@ reddit = praw.Reddit(
 )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 app.config.from_object('config.Config')
 db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+    if not User.query.filter_by(username='admin').first():
+        create_admin_user()
+
+
+@app.route('/protected')
+def protected():
+    if current_user.is_authenticated:
+        return jsonify({"loggedIn": True}), 200
+    else:
+        return jsonify({"loggedIn": False}), 401
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    user = User.query.filter_by(username=data['username']).first()
+
+    if user and bcrypt.check_password_hash(user.password, data['password']):
+        login_user(user)
+        print("Logged in successfully!")
+        return jsonify({"success": True, "message": "Logged in successfully!"}), 200
+    else:
+        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return jsonify({"message": "Logged out successfully!"}), 200
 
 
 def collection_wrapper():
@@ -93,16 +136,19 @@ def collect_posts(subreddit_name):
 
 
 @app.route('/')
+@login_required
 def home():
     return jsonify(message="Flask App with Admin User")
 
 
 @app.route('/post_limit')
+@login_required
 def post_limit():
     return f"Post limit: {post_limit}"
 
 
 @app.route('/change_post_limit/<int:new_limit>')
+@login_required
 def change_post_limit(new_limit):
     global post_limit
     post_limit = new_limit
@@ -110,6 +156,7 @@ def change_post_limit(new_limit):
 
 
 @app.route('/subreddit_list')
+@login_required
 def subreddit_list():
     subreddits = Subreddit.query.all()
     subreddit_data = [
@@ -124,6 +171,7 @@ def subreddit_list():
 
 
 @app.route('/add_subreddit/<subreddit_name>')
+@login_required
 def add_subreddit(subreddit_name):
     check = Subreddit.query.filter_by(name=subreddit_name).first()
     if check:
@@ -135,6 +183,7 @@ def add_subreddit(subreddit_name):
 
 
 @app.route('/start_collection')
+@login_required
 def start_collection():
     collection_thread = threading.Thread(target=collection_wrapper)
     collection_thread.start()
@@ -142,6 +191,7 @@ def start_collection():
 
 
 @app.route('/status')
+@login_required
 def get_status():
     return jsonify({
         'status': status,
