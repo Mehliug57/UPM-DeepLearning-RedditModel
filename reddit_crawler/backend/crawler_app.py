@@ -43,6 +43,14 @@ with app.app_context():
     if not User.query.filter_by(username='admin').first():
         create_admin_user()
 
+    with open("resources/subreddits.txt") as file:
+        for line in file:
+            check = Subreddit.query.filter_by(name=line.strip()).first()
+            if not check:
+                subreddit = Subreddit(name=line.strip())
+                db.session.add(subreddit)
+        db.session.commit()
+
 
 @app.route('/protected', methods=['GET'])
 def protected():
