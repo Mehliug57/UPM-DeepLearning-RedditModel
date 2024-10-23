@@ -14,7 +14,7 @@ function App() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get('/protected', { withCredentials: true })
+        axios.get('/api/protected', { withCredentials: true })
             .then(response => {
                 setIsLoggedIn(true);
             })
@@ -34,7 +34,7 @@ function App() {
         <Router>
             <div className="App bg-dark text-white min-vh-100 d-flex flex-column" style={{height: '100vh'}}>
                 <Routes>
-                    <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn}/>}/>
+                    <Route path="/api/login" element={<Login setIsLoggedIn={setIsLoggedIn}/>}/>
                     <Route
                         path="/"
                         element={
@@ -53,7 +53,7 @@ function App() {
                                     </div>
                                 </>
                             ) : (
-                                <Navigate to="/login"/>
+                                <Navigate to="/api/login"/>
                             )
                         }
                     />

@@ -6,7 +6,7 @@ const SubredditList = () => {
     const current_post_limit = 100; // Beispiel für das Limit
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/subreddit_list', {withCredentials: true})
+        axios.get('/api/subreddit_list', {withCredentials: true})
             .then(response => {
                 setSubreddits(response.data);
             })

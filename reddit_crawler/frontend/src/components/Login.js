@@ -10,14 +10,14 @@ const Login = ({setIsLoggedIn}) => {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://127.0.0.1:5000/login', {
+            const response = await axios.post('/api/login', {
                 username,
                 password,
             }, {withCredentials: true});
             if (response.data.success) {
                 setIsLoggedIn(true);
                 console.log("Logged in: " + response.data.success);
-                navigate('/');
+                navigate('/api/');
             } else {
                 console.log(response.data);
                 alert('Login failed');

@@ -6,7 +6,7 @@ const AddSubreddit = () => {
 
     const handleAddSubreddit = () => {
         if (subredditName !== '') {
-            axios.post('http://127.0.0.1:5000/add_subreddit', { subreddit_name: subredditName }, { withCredentials: true })
+            axios.post('/api/add_subreddit', { subreddit_name: subredditName }, { withCredentials: true })
                 .then(response => {
                     alert(response.data);
                     setSubredditName('');

@@ -9,7 +9,7 @@ const StatusDisplay = () => {
 
     useEffect(() => {
         const fetchStatus = () => {
-            axios.get('http://127.0.0.1:5000/status', { withCredentials: true })
+            axios.get('/api/status', { withCredentials: true })
                 .then(response => {
                     setStatus(response.data.status);
                     setCurrentSubreddit(response.data.current_subreddit);
