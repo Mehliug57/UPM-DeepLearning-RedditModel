@@ -17,7 +17,7 @@ const Login = ({setIsLoggedIn}) => {
             if (response.data.success) {
                 setIsLoggedIn(true);
                 console.log("Logged in: " + response.data.success);
-                navigate('/api/');
+                navigate('/');
             } else {
                 console.log(response.data);
                 alert('Login failed');
