@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from flask_cors import CORS
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 
-current_post_limit = 5000
+current_post_limit = 15000
 current_subreddit = None
 currently_collecting = False
 status = "Online"
