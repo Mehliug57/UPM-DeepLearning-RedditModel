@@ -151,6 +151,8 @@ def collect_posts(subreddit_name):
         status = f"Saved Post {post_counter}/{current_post_limit} - Pause for {pause_time} seconds."
         time.sleep(pause_time)
 
+collection_thread1 = threading.Thread(target=collection_wrapper)
+collection_thread1.start()
 
 @app.route('/', methods=['GET'])
 # @login_required
