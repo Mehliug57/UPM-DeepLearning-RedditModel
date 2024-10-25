@@ -51,6 +51,11 @@ with app.app_context():
                 db.session.add(subreddit)
         db.session.commit()
 
+    for subreddit in Subreddit.query.all():
+        if subreddit.collected_posts < current_post_limit:
+            subreddit.collection_done = False
+            db.session.commit()
+
 
 @app.route('/protected', methods=['GET'])
 def protected():
@@ -151,8 +156,8 @@ def collect_posts(subreddit_name):
         status = f"Saved Post {post_counter}/{current_post_limit} - Pause for {pause_time} seconds."
         time.sleep(pause_time)
 
-collection_thread1 = threading.Thread(target=collection_wrapper)
-collection_thread1.start()
+#collection_thread1 = threading.Thread(target=collection_wrapper)
+#collection_thread1.start()
 
 @app.route('/', methods=['GET'])
 # @login_required
