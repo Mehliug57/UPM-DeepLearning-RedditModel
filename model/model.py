@@ -12,7 +12,7 @@ def load_pre_tokenized_data(csv_path):
     df['input_ids'] = df['input_ids'].apply(eval)  # Converts the string into a list (input_ids)
     df['attention_mask'] = df['attention_mask'].apply(eval)  # Converts the string into a list (attention_mask)
     if 'label' in df.columns:
-        df['label'] = df['label'].apply(eval if df['label'].str.startswith('[').any() else int)
+        df['label'] = df['label'].apply(eval if str(df['label']).startswith('[') else int)
     # Create the dataset Hugging Face
     dataset = Dataset.from_pandas(df)
     return dataset
