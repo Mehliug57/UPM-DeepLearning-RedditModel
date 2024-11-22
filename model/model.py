@@ -61,19 +61,19 @@ def train_model(train_dataset, val_dataset, model, output_dir):
 
 # 4. Main
 def main():
-    csv_path = "path_to_tokenized_dataset.csv"  # Sostituisci con il percorso del file CSV tokenizzato
+    csv_path = "./tokenized_dataset_train.csv"  # path to the tokenized dataset
     dataset = load_pre_tokenized_data(csv_path)
 
-    # Dividi in training e validation set
+    # split in training e validation set
     dataset = dataset.train_test_split(test_size=0.2, seed=42)
     train_dataset = dataset["train"]
     val_dataset = dataset["test"]
 
-    # Calcola il numero di classi
-    num_labels = len(set(train_dataset['label']))  # Per multi-class
+    # calculate the number of classes
+    num_labels = len(set(train_dataset['label']))  # for multi-class
     model = prepare_model(num_labels)
 
-    # Allenamento
+    # training
     train_model(train_dataset, val_dataset, model, output_dir="./bert_model")
 
     
