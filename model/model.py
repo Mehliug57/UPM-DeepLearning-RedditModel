@@ -1,7 +1,7 @@
 import pandas as pd
 from datasets import Dataset
 from sklearn.metrics import accuracy_score
-from transformers import AlbertForSequenceClassification, Trainer, TrainingArguments
+from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments
 import torch
 
 # 1. Load the pre-tokenized dataset
@@ -13,14 +13,20 @@ def load_pre_tokenized_data(csv_path):
     df['attention_mask'] = df['attention_mask'].apply(eval)  # Converts the string into a list (attention_mask)
     if 'label' in df.columns:
         df['label'] = df['label'].apply(eval if str(df['label']).startswith('[') else int)
+    df['max_token_id'] = df['input_ids'].apply(lambda x: max(x))
+    print("--------------------------------------------")
+    print("Max token ID in dataset:", df['max_token_id'].max())
+    print("--------------------------------------------")
+
     # Create the Hugging Face dataset
     dataset = Dataset.from_pandas(df)
     return dataset
 
-# 2. Prepare the model
-def prepare_model(num_labels):
+# 2. Prepare the tokenizer and model
+def prepare_model_and_tokenizer(num_labels):
+    tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
     model = AlbertForSequenceClassification.from_pretrained("albert-base-v2", num_labels=num_labels)
-    return model
+    return model, tokenizer
 
 # 3. Define a function to compute the evaluation metrics (accuracy in our case)
 def compute_metrics(eval_pred):
@@ -30,7 +36,7 @@ def compute_metrics(eval_pred):
     return {"accuracy": accuracy}
 
 # 4. Training of the model
-def train_model(train_dataset, val_dataset, model, output_dir):
+def train_model(train_dataset, val_dataset, model, tokenizer, output_dir):
     training_args = TrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="epoch",
@@ -49,7 +55,7 @@ def train_model(train_dataset, val_dataset, model, output_dir):
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        tokenizer=None,  # No need for tokenizer since the dataset is already tokenized
+        tokenizer=tokenizer,  # Pass the tokenizer for validation and decoding
         compute_metrics=compute_metrics,  # Pass the function to compute evaluation metrics
     )
 
@@ -70,10 +76,10 @@ def main():
 
     # Calculate the number of classes
     num_labels = len(set(train_dataset['label']))  # For multi-class
-    model = prepare_model(num_labels)
+    model, tokenizer = prepare_model_and_tokenizer(num_labels)
 
     # Training
-    train_model(train_dataset, val_dataset, model, output_dir="./albert_model")
+    train_model(train_dataset, val_dataset, model, tokenizer, output_dir="./albert_model")
 
 if __name__ == "__main__":
     main()
