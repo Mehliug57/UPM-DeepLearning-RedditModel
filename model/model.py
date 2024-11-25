@@ -13,6 +13,10 @@ def load_pre_tokenized_data(csv_path):
     df['attention_mask'] = df['attention_mask'].apply(eval)  # Converts the string into a list (attention_mask)
     if 'label' in df.columns:
         df['label'] = df['label'].apply(eval if str(df['label']).startswith('[') else int)
+
+    # Apply the lambda function to adjust input_ids
+    df['input_ids'] = df['input_ids'].apply(lambda x: [1 if token > 30000 else token for token in x])
+    
     df['max_token_id'] = df['input_ids'].apply(lambda x: max(x))
     print("--------------------------------------------")
     print("Max token ID in dataset:", df['max_token_id'].max())
