@@ -1,34 +1,11 @@
 import pandas as pd
 import torch
-
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from transformers import DistilBertTokenizer
-from transformers import DistilBertForSequenceClassification
-from transformers import Trainer, TrainingArguments
-
-
-# preprocessing
-df = pd.read_csv('dataset.csv')
-df = df.dropna().drop_duplicates()
-print(df['name'].value_counts())
-
-texts = df['title'].tolist()
-labels = df['name'].tolist()
-
-label_encoder = LabelEncoder()
-encoded_labels = label_encoder.fit_transform(labels)
-
-
-label_mapping = dict(zip(label_encoder.classes_, range(len(label_encoder.classes_))))
-print(label_mapping)
-
-X_train, X_test, y_train, y_test = train_test_split(texts, encoded_labels, test_size=0.2, random_state=42)
-
-tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-
-train_encodings = tokenizer(X_train, truncation=True, padding=True, max_length=128)
-test_encodings = tokenizer(X_test, truncation=True, padding=True, max_length=128)
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
+import csv
+import os
+from datetime import datetime
 
 
 class RedditDataset(torch.utils.data.Dataset):
@@ -45,60 +22,144 @@ class RedditDataset(torch.utils.data.Dataset):
         return item
 
 
-train_dataset = RedditDataset(train_encodings, y_train)
-test_dataset = RedditDataset(test_encodings, y_test)
+class DistilBertTrainer:
+    def __init__(self, train_mode=True, output_dir='./results', trained_model_dir=None, batch_size=16, epochs=3,
+                 learning_rate=2e-5):
+        self.df = pd.read_csv('dataset.csv')
+        self.df = self.df.dropna().drop_duplicates()
+        print(self.df['name'].value_counts())
 
-num_classes = len(label_mapping)
+        self.texts = self.df['title'].tolist()
+        self.labels = self.df['name'].tolist()
 
-# model
-model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=num_classes)
+        self.label_encoder = LabelEncoder()
+        self.encoded_labels = self.label_encoder.fit_transform(self.labels)
 
-training_args = TrainingArguments(
-    output_dir='./results',
-    evaluation_strategy='epoch',
-    per_device_train_batch_size=16,
-    per_device_eval_batch_size=16,
-    num_train_epochs=3,
-    logging_dir='./logs',
-    logging_steps=10,
-)
+        self.label_mapping = dict(zip(self.label_encoder.classes_, range(len(self.label_encoder.classes_))))
+        print(self.label_mapping)
 
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=test_dataset,
-)
+        if train_mode:
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            if not os.path.exists(os.path.join(output_dir, "logs")):
+                os.makedirs(os.path.join(output_dir, "logs"))
+            self.log_file = os.path.join(output_dir, "logs", "log.csv")
+            self._init_logging()
+            self._log_event("In train mode: preprocessing done")
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.texts, self.encoded_labels,
+                                                                                    test_size=0.2, random_state=42)
+            self._log_event("Data split", f"Train size: {len(self.X_train)}, Test size: {len(self.X_test)}")
+            self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
-trainer.train()
+            self.train_encodings = self.tokenizer(self.X_train, truncation=True, padding=True, max_length=128)
+            self.test_encodings = self.tokenizer(self.X_test, truncation=True, padding=True, max_length=128)
 
-results = trainer.evaluate()
-print(results)
+            self.train_dataset = RedditDataset(self.train_encodings, self.y_train)
+            self.test_dataset = RedditDataset(self.test_encodings, self.y_test)
 
-# save model
-model.save_pretrained('./subreddit_model')
-tokenizer.save_pretrained('./subreddit_tokenizer')
+            self.num_classes = len(self.label_mapping)
+            self._log_event("Dataset created", f"Number of classes: {self.num_classes}")
+
+            # model
+            self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased',
+                                                                             num_labels=self.num_classes)
+
+            self.training_args = TrainingArguments(
+                output_dir=output_dir,
+                evaluation_strategy='epoch',
+                per_device_train_batch_size=batch_size,
+                per_device_eval_batch_size=batch_size,
+                num_train_epochs=epochs,
+                logging_dir='./logs',
+                logging_steps=10,
+                learning_rate=learning_rate
+            )
+
+            self._log_event("Model created",
+                            f"Training started with batch size: {batch_size}, learning rate: {learning_rate}, epochs: {epochs}")
+
+            self.trainer = Trainer(
+                model=self.model,
+                args=self.training_args,
+                train_dataset=self.train_dataset,
+                eval_dataset=self.test_dataset,
+            )
+            self._log_event("Training started")
+            self.trainer.train()
+            self._log_event("Training completed")
+            self.results = self.trainer.evaluate()
+            print(self.results)
+            self._log_event("Evaluation completed", f"Results: {self.results}")
+            self.model.save_pretrained(output_dir)
+            self._log_event("Model saved", f"Output directory: {output_dir}")
+            self.tokenizer.save_pretrained(output_dir)
+            self._log_event("Tokenizer saved", f"Output directory: {output_dir}")
+
+        else:
+            if not trained_model_dir:
+                raise ValueError("NO MODEL DIRECTORY PROVIDED!")
+
+            self.model = DistilBertForSequenceClassification.from_pretrained(trained_model_dir)
+            self.tokenizer = DistilBertTokenizer.from_pretrained(trained_model_dir)
+
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                self.device = torch.device("mps")
+            else:
+                self.device = torch.device("cpu")
+
+            self.model = self.model.to(self.device)
+
+            while True:
+                text = input("Enter a title: ")
+                self.predict(text)
+
+    def predict(self, text):
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=128)
+        inputs = {key: val.to(self.device) for key, val in inputs.items()}
+        outputs = self.model(**inputs)
+        predicted_class = torch.argmax(outputs.logits).item()
+        predicted_subreddit = self.label_encoder.inverse_transform([predicted_class])
+        print(f"Suggestion: {predicted_subreddit[0]}")
+
+    def _init_logging(self):
+        with open(self.log_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Timestamp', 'Event', 'Details'])
+
+    def _log_event(self, event, details=""):
+        with open(self.log_file, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([datetime.now().isoformat(), event, details])
 
 
-# load model
-model = DistilBertForSequenceClassification.from_pretrained('./subreddit_model')
-tokenizer = DistilBertTokenizer.from_pretrained('./subreddit_tokenizer')
+def training():
+    batch_size = [8, 16]
+    learning_rate = [1e-5, 2e-5, 5e-5]
 
-# inference
-print(torch.backends.mps.is_available())
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
-model = model.to(device)
-
-
-def predict(text):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=128)
-    inputs = {key: val.to(device) for key, val in inputs.items()}
-    outputs = model(**inputs)
-    predicted_class = torch.argmax(outputs.logits).item()
-    predicted_subreddit = label_encoder.inverse_transform([predicted_class])
-    print(f"Suggestion: {predicted_subreddit[0]}")
+    # Grid search
+    for bs in batch_size:
+        for lr in learning_rate:
+            directory = f"./results_bs_{bs}_lr_{lr}"
+            print(f"Training started for batch size: {bs}, learning rate: {lr}")
+            trainer = DistilBertTrainer(output_dir=directory, batch_size=bs, learning_rate=lr)
+            print(f"Training completed for batch size: {bs}, learning rate: {lr}")
 
 
-while True:
-    text = input("Enter a title: ")
-    predict(text)
+def inference():
+    inferencer = DistilBertTrainer(train_mode=False, trained_model_dir='./subreddit_model')
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 2:
+        raise ValueError("Please provide mode: train or inference")
+    mode = sys.argv[1]
+    if mode == "train":
+        training()
+    elif mode == "inference":
+        inference()
+    else:
+        raise ValueError("Invalid mode. Please provide either train or inference")
