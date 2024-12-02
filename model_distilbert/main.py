@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import torch
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -46,8 +47,8 @@ class DistilBertTrainer:
             self.log_file = os.path.join(output_dir, "logs", "log.csv")
             self._init_logging()
             self._log_event("In train mode: preprocessing done")
-            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.texts, self.encoded_labels,
-                                                                                    test_size=0.2, random_state=42)
+            self.X_train, self.X_test, self.y_train, self.y_test 
+                = train_test_split(self.texts, self.encoded_labels, test_size=0.2, random_state=42)
             self._log_event("Data split", f"Train size: {len(self.X_train)}, Test size: {len(self.X_test)}")
             self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
@@ -60,9 +61,8 @@ class DistilBertTrainer:
             self.num_classes = len(self.label_mapping)
             self._log_event("Dataset created", f"Number of classes: {self.num_classes}")
 
-            # model
-            self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased',
-                                                                             num_labels=self.num_classes)
+            self.model = DistilBertForSequenceClassification
+                .from_pretrained('distilbert-base-uncased',num_labels=self.num_classes)
 
             self.training_args = TrainingArguments(
                 output_dir=output_dir,
@@ -75,8 +75,8 @@ class DistilBertTrainer:
                 learning_rate=learning_rate
             )
 
-            self._log_event("Model created",
-                            f"Training started with batch size: {batch_size}, learning rate: {learning_rate}, epochs: {epochs}")
+            self._log_event("Model created", f"Training started with batch size: 
+                {batch_size}, learning rate: {learning_rate}, epochs: {epochs}")
 
             self.trainer = Trainer(
                 model=self.model,
@@ -84,6 +84,7 @@ class DistilBertTrainer:
                 train_dataset=self.train_dataset,
                 eval_dataset=self.test_dataset,
             )
+
             self._log_event("Training started")
             self.trainer.train()
             self._log_event("Training completed")
@@ -123,27 +124,76 @@ class DistilBertTrainer:
         predicted_subreddit = self.label_encoder.inverse_transform([predicted_class])
         print(f"Suggestion: {predicted_subreddit[0]}")
 
+    # Init logging for general events
     def _init_logging(self):
         with open(self.log_file, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp', 'Event', 'Details'])
-
+    # Logging for general events
     def _log_event(self, event, details=""):
         with open(self.log_file, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([datetime.now().isoformat(), event, details])
 
+    # Logging for SPSS
+    def log_detailed_results(self, batch_size, learning_rate):
+        # Get predictions for the test set
+        predictions = self.trainer.predict(self.test_dataset)
+
+        # Extract true labels and predicted probabilities
+        true_labels = predictions.label_ids
+        pred_probs = predictions.predictions
+        pred_labels = np.argmax(pred_probs, axis=1)
+
+        # Compute residuals (difference between true and predicted probabilities for true class)
+        residuals = pred_probs[np.arange(len(true_labels)), true_labels] - 1  # Assuming 1 is perfect confidence
+
+        # Create a DataFrame with the necessary data
+        results_df = pd.DataFrame({
+            'Batch Size': [batch_size] * len(true_labels),
+            'Learning Rate': [learning_rate] * len(true_labels),
+            'True Label': true_labels,
+            'Predicted Label': pred_labels,
+            'Residual': residuals,
+        })
+
+        # Compute summary metrics
+        accuracy = (true_labels == pred_labels).mean()
+        precision = precision_score(true_labels, pred_labels, average='weighted')  # Weighted for multi-class
+        recall = recall_score(true_labels, pred_labels, average='weighted')        # Weighted for multi-class
+
+        summary_df = pd.DataFrame([{
+            'Batch Size': batch_size,
+            'Learning Rate': learning_rate,
+            'Accuracy': accuracy,
+            'Precision': precision,
+            'Recall': recall,
+            'Mean Residual': residuals.mean(),
+            'Residual Variance': residuals.var(),
+        }])
+
+        # Save detailed results
+        detailed_results_path = os.path.join(self.training_args.output_dir, f'detailed_results_bs_{batch_size}_lr_{learning_rate}.csv')
+        results_df.to_csv(detailed_results_path, index=False)
+
+        # Save summary metrics
+        summary_results_path = os.path.join(self.training_args.output_dir, f'summary_results.csv')
+        summary_df.to_csv(summary_results_path, mode='a', index=False, header=not os.path.exists(summary_results_path))
+
+        print(f"Detailed Results Saved to: {detailed_results_path}")
+        print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}")
 
 def training():
-    batch_size = [8, 16]
-    learning_rate = [1e-5, 2e-5, 5e-5]
+    batch_sizes = [8, 16]
+    learning_rates = [1e-5, 2e-5, 5e-5]
 
     # Grid search
-    for bs in batch_size:
-        for lr in learning_rate:
+    for bs in batch_sizes:
+        for lr in learning_rates:
             directory = f"./results_bs_{bs}_lr_{lr}"
             print(f"Training started for batch size: {bs}, learning rate: {lr}")
             trainer = DistilBertTrainer(output_dir=directory, batch_size=bs, learning_rate=lr)
+            trainer.log_detailed_results(bs, lr)
             print(f"Training completed for batch size: {bs}, learning rate: {lr}")
 
 
