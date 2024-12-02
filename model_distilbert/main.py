@@ -40,16 +40,8 @@ class DistilBertTrainer:
         print(self.label_mapping)
 
         if train_mode:
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-            if not os.path.exists(os.path.join(output_dir, "logs")):
-                os.makedirs(os.path.join(output_dir, "logs"))
-            self.log_file = os.path.join(output_dir, "logs", "log.csv")
-            self._init_logging()
-            self._log_event("In train mode: preprocessing done")
             self.X_train, self.X_test, self.y_train, self.y_test 
                 = train_test_split(self.texts, self.encoded_labels, test_size=0.2, random_state=42)
-            self._log_event("Data split", f"Train size: {len(self.X_train)}, Test size: {len(self.X_test)}")
             self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
             self.train_encodings = self.tokenizer(self.X_train, truncation=True, padding=True, max_length=128)
@@ -59,7 +51,6 @@ class DistilBertTrainer:
             self.test_dataset = RedditDataset(self.test_encodings, self.y_test)
 
             self.num_classes = len(self.label_mapping)
-            self._log_event("Dataset created", f"Number of classes: {self.num_classes}")
 
             self.model = DistilBertForSequenceClassification
                 .from_pretrained('distilbert-base-uncased',num_labels=self.num_classes)
@@ -75,9 +66,6 @@ class DistilBertTrainer:
                 learning_rate=learning_rate
             )
 
-            self._log_event("Model created", f"Training started with batch size: 
-                {batch_size}, learning rate: {learning_rate}, epochs: {epochs}")
-
             self.trainer = Trainer(
                 model=self.model,
                 args=self.training_args,
@@ -85,16 +73,11 @@ class DistilBertTrainer:
                 eval_dataset=self.test_dataset,
             )
 
-            self._log_event("Training started")
             self.trainer.train()
-            self._log_event("Training completed")
             self.results = self.trainer.evaluate()
             print(self.results)
-            self._log_event("Evaluation completed", f"Results: {self.results}")
             self.model.save_pretrained(output_dir)
-            self._log_event("Model saved", f"Output directory: {output_dir}")
             self.tokenizer.save_pretrained(output_dir)
-            self._log_event("Tokenizer saved", f"Output directory: {output_dir}")
 
         else:
             if not trained_model_dir:
@@ -123,17 +106,6 @@ class DistilBertTrainer:
         predicted_class = torch.argmax(outputs.logits).item()
         predicted_subreddit = self.label_encoder.inverse_transform([predicted_class])
         print(f"Suggestion: {predicted_subreddit[0]}")
-
-    # Init logging for general events
-    def _init_logging(self):
-        with open(self.log_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Timestamp', 'Event', 'Details'])
-    # Logging for general events
-    def _log_event(self, event, details=""):
-        with open(self.log_file, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([datetime.now().isoformat(), event, details])
 
     # Logging for SPSS
     def log_detailed_results(self, batch_size, learning_rate):
@@ -196,10 +168,8 @@ def training():
             trainer.log_detailed_results(bs, lr)
             print(f"Training completed for batch size: {bs}, learning rate: {lr}")
 
-
 def inference():
     inferencer = DistilBertTrainer(train_mode=False, trained_model_dir='./subreddit_model')
-
 
 if __name__ == "__main__":
     import sys
