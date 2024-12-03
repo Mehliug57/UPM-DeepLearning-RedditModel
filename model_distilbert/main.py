@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score, recall_score
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
 import csv
 import os
@@ -40,8 +41,7 @@ class DistilBertTrainer:
         print(self.label_mapping)
 
         if train_mode:
-            self.X_train, self.X_test, self.y_train, self.y_test 
-                = train_test_split(self.texts, self.encoded_labels, test_size=0.2, random_state=42)
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.texts, self.encoded_labels, test_size=0.2, random_state=42)
             self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
             self.train_encodings = self.tokenizer(self.X_train, truncation=True, padding=True, max_length=128)
@@ -52,8 +52,7 @@ class DistilBertTrainer:
 
             self.num_classes = len(self.label_mapping)
 
-            self.model = DistilBertForSequenceClassification
-                .from_pretrained('distilbert-base-uncased',num_labels=self.num_classes)
+            self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased',num_labels=self.num_classes)
 
             self.training_args = TrainingArguments(
                 output_dir=output_dir,
