@@ -107,7 +107,10 @@ class DistilBertTrainer:
         print(f"Suggestion: {predicted_subreddit[0]}")
 
     # Logging for SPSS
-    def log_detailed_results(self, batch_size, learning_rate):
+    def log_detailed_results(self, batch_size, learning_rate, run_id):
+        # Ensure the output directory exists
+        os.makedirs(self.training_args.output_dir, exist_ok=True)
+
         # Get predictions for the test set
         predictions = self.trainer.predict(self.test_dataset)
 
@@ -143,29 +146,37 @@ class DistilBertTrainer:
             'Residual Variance': residuals.var(),
         }])
 
-        # Save detailed results
-        detailed_results_path = os.path.join(self.training_args.output_dir, f'detailed_results_bs_{batch_size}_lr_{learning_rate}.csv')
+        # Save detailed results with run ID
+        detailed_results_path = os.path.join(
+            self.training_args.output_dir, 
+            f'detailed_results_bs_{batch_size}_lr_{learning_rate}_run_{run_id}.csv'
+        )
         results_df.to_csv(detailed_results_path, index=False)
 
-        # Save summary metrics
-        summary_results_path = os.path.join(self.training_args.output_dir, f'summary_results.csv')
+        # Save summary metrics with run ID
+        summary_results_path = os.path.join(
+            self.training_args.output_dir,
+            f'summary_results.csv'  # Single summary file, append all runs
+        )
         summary_df.to_csv(summary_results_path, mode='a', index=False, header=not os.path.exists(summary_results_path))
 
         print(f"Detailed Results Saved to: {detailed_results_path}")
         print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}")
 
-def training():
+def training():        
     batch_sizes = [8, 16]
     learning_rates = [1e-5, 2e-5, 5e-5]
+    repetitions = 5
 
     # Grid search
-    for bs in batch_sizes:
-        for lr in learning_rates:
-            directory = f"./results_bs_{bs}_lr_{lr}"
-            print(f"Training started for batch size: {bs}, learning rate: {lr}")
-            trainer = DistilBertTrainer(output_dir=directory, batch_size=bs, learning_rate=lr)
-            trainer.log_detailed_results(bs, lr)
-            print(f"Training completed for batch size: {bs}, learning rate: {lr}")
+    for run_id in range(1, repetitions + 1):
+        for bs in batch_sizes:
+            for lr in learning_rates:
+                directory = f"./results_bs_{bs}_lr_{lr}_run_{run_id}"
+                print(f"Training started for batch size: {bs}, learning rate: {lr}, run: {run_id}")
+                trainer = DistilBertTrainer(output_dir=directory, batch_size=bs, learning_rate=lr)
+                trainer.log_detailed_results(bs, lr, run_id)
+                print(f"Training completed for batch size: {bs}, learning rate: {lr}, run: {run_id}")
 
 def inference():
     inferencer = DistilBertTrainer(train_mode=False, trained_model_dir='./subreddit_model')
