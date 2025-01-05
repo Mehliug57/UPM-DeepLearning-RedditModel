@@ -1,0 +1,13 @@
+Docker HowTo: 
+naviguate in the model_distilbert directory 
+and run the following commands
+
+To build Docker image ->
+"docker build -t reddit-predictor ."
+
+-t reddit-predictor assigns name to the image
+. tells Docker to look for Dockerfile in current dir
+
+To run the Docker container ->
+"docker run -p 8080:8080 reddit-predictor"
+
