@@ -7,8 +7,7 @@ from sklearn.metrics import precision_score, recall_score
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
 import csv
 import os
-from datetime import datetime
-
+import joblib
 
 class RedditDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
@@ -34,13 +33,19 @@ class DistilBertTrainer:
         self.texts = self.df['title'].tolist()
         self.labels = self.df['name'].tolist()
 
-        self.label_encoder = LabelEncoder()
-        self.encoded_labels = self.label_encoder.fit_transform(self.labels)
-
-        self.label_mapping = dict(zip(self.label_encoder.classes_, range(len(self.label_encoder.classes_))))
-        print(self.label_mapping)
-
         if train_mode:
+            self.label_encoder = LabelEncoder()
+            self.encoded_labels = self.label_encoder.fit_transform(self.labels)
+
+            # Save LabelEncoder
+            os.makedirs(output_dir, exist_ok=True)
+            label_encoder_path = os.path.join(output_dir, 'label_encoder.pkl')
+            joblib.dump(self.label_encoder, label_encoder_path)
+            print(f"Label encoder saved to {label_encoder_path}")
+
+            self.label_mapping = dict(zip(self.label_encoder.classes_, range(len(self.label_encoder.classes_))))
+            print(self.label_mapping)
+
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.texts, self.encoded_labels, test_size=0.2, random_state=42)
             self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
@@ -52,7 +57,7 @@ class DistilBertTrainer:
 
             self.num_classes = len(self.label_mapping)
 
-            self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased',num_labels=self.num_classes)
+            self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=self.num_classes)
 
             self.training_args = TrainingArguments(
                 output_dir=output_dir,
@@ -82,6 +87,13 @@ class DistilBertTrainer:
             if not trained_model_dir:
                 raise ValueError("NO MODEL DIRECTORY PROVIDED!")
 
+            # Load LabelEncoder
+            label_encoder_path = os.path.join(trained_model_dir, 'label_encoder.pkl')
+            if not os.path.exists(label_encoder_path):
+                raise ValueError(f"Label encoder not found in {label_encoder_path}")
+            self.label_encoder = joblib.load(label_encoder_path)
+            print(f"Label encoder loaded from {label_encoder_path}")
+
             self.model = DistilBertForSequenceClassification.from_pretrained(trained_model_dir)
             self.tokenizer = DistilBertTokenizer.from_pretrained(trained_model_dir)
 
@@ -108,21 +120,15 @@ class DistilBertTrainer:
 
     # Logging for SPSS
     def log_detailed_results(self, batch_size, learning_rate, run_id):
-        # Ensure the output directory exists
         os.makedirs(self.training_args.output_dir, exist_ok=True)
 
-        # Get predictions for the test set
         predictions = self.trainer.predict(self.test_dataset)
-
-        # Extract true labels and predicted probabilities
         true_labels = predictions.label_ids
         pred_probs = predictions.predictions
         pred_labels = np.argmax(pred_probs, axis=1)
 
-        # Compute residuals (difference between true and predicted probabilities for true class)
-        residuals = pred_probs[np.arange(len(true_labels)), true_labels] - 1  # Assuming 1 is perfect confidence
+        residuals = pred_probs[np.arange(len(true_labels)), true_labels] - 1
 
-        # Create a DataFrame with the necessary data
         results_df = pd.DataFrame({
             'Batch Size': [batch_size] * len(true_labels),
             'Learning Rate': [learning_rate] * len(true_labels),
@@ -131,10 +137,9 @@ class DistilBertTrainer:
             'Residual': residuals,
         })
 
-        # Compute summary metrics
         accuracy = (true_labels == pred_labels).mean()
-        precision = precision_score(true_labels, pred_labels, average='weighted')  # Weighted for multi-class
-        recall = recall_score(true_labels, pred_labels, average='weighted')        # Weighted for multi-class
+        precision = precision_score(true_labels, pred_labels, average='weighted')
+        recall = recall_score(true_labels, pred_labels, average='weighted')
 
         summary_df = pd.DataFrame([{
             'Batch Size': batch_size,
@@ -146,17 +151,15 @@ class DistilBertTrainer:
             'Residual Variance': residuals.var(),
         }])
 
-        # Save detailed results with run ID
         detailed_results_path = os.path.join(
             self.training_args.output_dir, 
             f'detailed_results_bs_{batch_size}_lr_{learning_rate}_run_{run_id}.csv'
         )
         results_df.to_csv(detailed_results_path, index=False)
 
-        # Save summary metrics with run ID
         summary_results_path = os.path.join(
             self.training_args.output_dir,
-            f'summary_results.csv'  # Single summary file, append all runs
+            f'summary_results.csv'
         )
         summary_df.to_csv(summary_results_path, mode='a', index=False, header=not os.path.exists(summary_results_path))
 
@@ -164,26 +167,29 @@ class DistilBertTrainer:
         print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}")
 
 def training():        
-    batch_sizes = [8, 16]
-    learning_rates = [1e-5, 2e-5, 5e-5]
-    repetitions = 5
+    batch_size = 8
+    learning_rate = 5e-5
+    run_id = 1
 
-    # Grid search
-    for run_id in range(1, repetitions + 1):
-        for bs in batch_sizes:
-            for lr in learning_rates:
-                directory = f"./results_bs_{bs}_lr_{lr}_run_{run_id}"
-                print(f"Training started for batch size: {bs}, learning rate: {lr}, run: {run_id}")
-                trainer = DistilBertTrainer(output_dir=directory, batch_size=bs, learning_rate=lr)
-                trainer.log_detailed_results(bs, lr, run_id)
-                print(f"Training completed for batch size: {bs}, learning rate: {lr}, run: {run_id}")
+    directory = f"./results_bs_{batch_size}_lr_{learning_rate}_run{run_id}"
+    print(f"Training started for batch size: {batch_size}, learning rate: {learning_rate}, run: {run_id}")
+    trainer = DistilBertTrainer(output_dir=directory, batch_size=batch_size, learning_rate=learning_rate)
+    trainer.log_detailed_results(batch_size, learning_rate, run_id)
+    print(f"Training completed for batch size: {batch_size}, learning rate: {learning_rate}, run: {run_id}")
 
 def inference():
     inferencer = DistilBertTrainer(train_mode=False, trained_model_dir='./subreddit_model')
 
 if __name__ == "__main__":
     import sys
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    print("Is CUDA available?", torch.cuda.is_available())
+    if torch.cuda.is_available():
+        print("CUDA Device Name:", torch.cuda.get_device_name(0))
+    else:
+        print("No GPU detected.")
+    print("PyTorch version:", torch.__version__)
     if len(sys.argv) < 2:
         raise ValueError("Please provide mode: train or inference")
     mode = sys.argv[1]

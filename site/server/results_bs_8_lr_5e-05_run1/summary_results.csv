@@ -1,0 +1,2 @@
+Batch Size,Learning Rate,Accuracy,Precision,Recall,Mean Residual,Residual Variance
+8,5e-05,0.7174286505957329,0.7119242090862375,0.7174286505957329,3.4354305,14.478035
